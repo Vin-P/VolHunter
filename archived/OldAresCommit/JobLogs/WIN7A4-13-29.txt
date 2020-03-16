@@ -1,0 +1,20 @@
+
+Target is WIN7A4-13
+
+Folders Created on WIN7A4-13
+
+Tools Shipped to WIN7A4-13
+
+Executing (Win32_Process)->Create()
+
+Method execution successful.
+
+Out Parameters:
+instance of __PARAMETERS
+{
+	ProcessId = 2140;
+	ReturnValue = 0;
+};
+
+VolHunter executing on WIN7A4-13
+

@@ -1,2 +1,0 @@
-pipeline.unsafe_shutdown: true
-config.reload.automatic: true
