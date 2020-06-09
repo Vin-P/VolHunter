@@ -116,7 +116,7 @@ Function Set-VHEnvironment {
 		try {
 			$bPath = "Base = $basePath\"
 			$bTools = "Tool = $basePath\Tools\"
-			$bImage = "Image = $basePath\Image\"
+			$bImage = "Image = $basePath\Image"
 			$bOutput = "Output = $basePath\Output\"
 			$bLog = "Log = $basePath\VHLog"
 			$bProfile = "Profile = $basePath\VolProfile.txt"
@@ -158,7 +158,8 @@ Function Set-VHEnvironment {
 }#End Function Set-VHEnvironment
 
 Function Parse-BasePath {
-	Process {	
+	Process {
+        #This function was made to handle parsing an Enviornment variable into a dictionary.
 		[hashtable]$table = @{}
 		$pathLists = $env:BDirList.Split(",")
 		foreach ($item in $pathLists) {
@@ -430,12 +431,14 @@ Function Get-VHStatus {
 				$bDonePath = $hBasePath["Done"]
 				
 			}
-			$status = Validate-Path -target $target -path $bDonePath -Creds $creds
+			$status = Validate-Path -target $target -path $bDonePath -Creds $Global:Credential
 			if ($status) {
-				Write-Host "$target is done" -backgroundColor DarkGreen -ForegroundColor White
+				#Write-Host "$target is done" -backgroundColor DarkGreen -ForegroundColor White
+                Write-It -msg "Target is done" -type "Information" 
 
 			} else {
-				Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+				#Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+                Write-It -msg "$target is still working" -type "Warning"
 
 			}
 		} catch {
@@ -470,9 +473,12 @@ Function Get-VHMemDump {
 			}
 			$status = Validate-Path -target $target -path $bDonePath -Creds $global:Credential
 			if ($status) {
-				Write-Host "Copying memory dump from $target" -BackgroundColor White -ForegroundColor Black
+				#Write-Host "Copying memory dump from $target" -BackgroundColor White -ForegroundColor Black
+                Write-It -msg "Copying Memory dump from $target" -type "Information"
 				$session = New-PSSession -ComputerName $target -Credential $global:Credential
-				Copy-Item -path $imagePath*.bin -Destination $gLogPath -FromSession $session
+                #$session = New-PSSession -ComputerName $target
+                $hName = Invoke-Command -ScriptBlock {return Hostname} -Session $session
+				Copy-Item -path $imagePath\$hName.bin -Destination $gLogPath -FromSession $session
 				Disconnect-PSSession $session
 				Remove-PSSession $session
 
@@ -527,7 +533,7 @@ Function Get-VHOutput {
 		}
 		
 		$lineCount = (Get-Content $targetList | Measure-Object -Line).Lines
-		foreach ($target in get-content $targetList) {
+		foreach ($target in (get-content $targetList)) {
 			try {
 				if (!(Test-Connection -ComputerName $target -BufferSize 16 -Count 1 -Quiet)) {
 					Write-It -msg "$target appears offline" -type "Warning"
@@ -536,16 +542,19 @@ Function Get-VHOutput {
 				}
 				$status = Validate-Path -target $target -Path $bDonePath -Creds $global:Credential
 				if ($status) {
-					Write-Host "Copying output from $target" -BackgroundColor White -ForegroundColor Black
+					#Write-Host "Copying output from $target" -BackgroundColor White -ForegroundColor Black
+                    Write-It -msg "Copying output from $target" -type "Information"
 					$session = New-PSSession -ComputerName $target -Credential $global:Credential
-					Copy-Item -path $bOutput* -Destination $gLogPath -FromSession $session
-					Copy-Item -path $vhLog-*.txt -Destination $vLogPath -FromSession $session 
+                    #$session = New-PSSession -ComputerName $target
+					Copy-Item -path $bOutput -Destination $gLogPath -Recurse -FromSession $session
+					Copy-Item -path $vhLog -Destination $vLogPath -Recurse -FromSession $session 
 					Copy-Item -path $vhProfile -Destination $vLogPath$target-profile.txt -FromSession $session 
 					Disconnect-PSSession $session
 					Remove-PSSession $session
 
 				} else {
-					Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+					#Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+                    Write-It -msg "$target is still working" -type "Warning"
 
 				}
 			} catch {
@@ -574,10 +583,12 @@ Function Get-VHStatusAll {
 			foreach ($target in (Get-Content $targetList)) {
 				$status = Validate-Path -target $target -path $bDonePath -Creds $global:Credential
 				if ($status) {
-					Write-Host "$target is done" -backgroundColor DarkGreen -ForegroundColor White
+					#Write-Host "$target is done" -backgroundColor DarkGreen -ForegroundColor White
+                    Write-It -msg "$target is done" -type "Success"
 
 				} else {
-					Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+					#Write-Host "$target is still working" -BackgroundColor Red -ForegroundColor Black
+                    Write-It -msg "$target is still working" -type "Warning"
 
 				}
 			}
@@ -624,22 +635,29 @@ Function Remove-VHRemote {
 	
 	$hBasePath = Parse-BasePath
 	if ($rPath -eq "") {
-		$rPath = $hBasePath["Base"]
+		[System.Collections.ArrayList]$rPath = @($hBasePath["Base"])
 		
 	}
+    #write-host "Starting Remove-VHRemote" -BackgroundColor White -ForegroundColor Black
+    Write-It -msg "Starting Remove-VHRemote" -type "Information"
 	
 	$cleanBlock = {
 		Param(
 			[Parameter(Mandatory=$True,Position=0)]
-				[System.Collections.ArrayList]$blockList
+				$blockList
 				
 		)
-		$rPath = $blockList[0]
-		Remove-Item -path $rPath -Recurse -Force
-		
-	}
-	
+		$rPath = $blockList
+       
+        if ($rPath -ne $env:SystemRoot) {        
+		    Remove-Item -path $rPath -Recurse -Force
+          
+		}
+	}	
 	Run-VHRemote -block $cleanBlock -blockArgList $rPath -MaxThreads $maxThreads -TargetList $targetList -cred $cred
+    #Write-Host "Completed Remove-VHRemote" -BackgroundColor White -ForegroundColor Black
+    Write-It -msg "Completed Remove-VHRemote" -type "Information"
+
 }#End Function Remove-VHRemote
 
 Function Run-VHRemote {
@@ -670,8 +688,8 @@ Function Run-VHRemote {
 					
                 }
                 try {
-                    invoke-command -AsJob -ScriptBlock $block -ComputerName $target -ArgumentList $blockArgList
-                    #invoke-command -AsJob -ScriptBlock $block -ComputerName $target -ArgumentList $blockArgList -Credential $cred
+                    #invoke-command -AsJob -ScriptBlock $block -ComputerName $target -ArgumentList $blockArgList
+                    invoke-command -AsJob -ScriptBlock $block -ComputerName $target -ArgumentList $blockArgList -Credential $cred
                 
                 } Catch {
                     write-error "An Error Occurred during run-VHRemote invoke-command"
@@ -692,7 +710,8 @@ Function Run-VHRemote {
 					
                     foreach ($job in Get-Job) {
                         if ($job.State -eq "Running") {
-                            Write-Host $job.Name
+                            #Write-Host $job.Name
+                            Write-It -msg $job -type "Information"
 							
                         }
                     }
@@ -802,7 +821,7 @@ Function Start-VHExecutionCleanup{
                 $hostName = hostname
                 $hostImg = $hostName + ".bin"           #Based on default Input for $basePath 
                 $baseDir = $hBasePath["Base"]           #Base = C:\Windows\CCm\Perf\VolH\
-                $imageDir = $hBasePath["Image"]         #Image = C:\Windows\CCm\Perf\VolH\Image\
+                $imageDir = $hBasePath["Image"]+"\"     #Image = C:\Windows\CCm\Perf\VolH\Image
                 $outputDir = $hBasePath["Output"]       #Output = C:\Windows\CCm\Perf\VolH\Output\
                 $toolDir = $hBasePath["Tool"]           #Tools = C:\Windows\CCm\Perf\VolH\Tools\
 				$logDir = $hBasePath["Log"]             #Log =  C:\Windows\CCm\Perf\VolH\VHLog
@@ -852,7 +871,8 @@ Function Start-VHExecutionCleanup{
 					
             }#End rerunBlock
 
-            Write-Host "SENDING RERUN COMMANDS" -ForegroundColor Black -BackgroundColor Green
+            #Write-Host "SENDING RERUN COMMANDS" -ForegroundColor Black -BackgroundColor Green
+            Write-It   -msg "SENDING RERUN COMMANDS" -type "Information"
 			Run-VHRemote -block $rerunBlock -blockArgList $blockList -MaxThreads $maxThreads -TargetList $targetList -cred $global:Credential
 			
         } catch {
@@ -883,29 +903,17 @@ Function Prep-Environment {
 			)
 			
 			$baseDir = $BasePath["Base"]
-            $imageDir = $BasePath["Image"]
+            $imageDir = $BasePath["Image"]+"\"
             $outputDir = $BasePath["Output"]
             $toolDir = $BasePath["Tool"]
-		    
-            #pLog is used for dev logs
-            $pLog = "C:\Windows\CCM\PLog.txt"
-            #New-Item $pLog -ItemType File
 
 			if (!(Test-Path -Path $baseDir)) {
 				
                 foreach ( $key in $basePath.keys) {
                     if ($key -eq "Base") {
-                        #Write-Host "$key is being made" -BackgroundColor White -ForegroundColor Black
-                        #Out-File -FilePath $pLog -InputObject "Base If statement reached" -Append
                         New-Item -ItemType Directory -Path ($basePath[$key]) | ForEach-Object { $_.Attributes = "hidden" }
 
-                    } elseif ( ($key) -eq "Profile" -or ($key) -eq "Done" ) {
-                        Out-File -FilePath $pLog -InputObject "key is either 'Profile' or 'Done' no directory made " -Append
-                        #Write-Host "$key is a txt file" -BackgroundColor White -ForegroundColor Black
-
-                    } else {
-                        #Write-Host "$key is being made" -BackgroundColor White -ForegroundColor Black
-                        Out-File -FilePath $pLog -InputObject "$key directory made" -Append
+                    } elseif (($key) -ne "Profile" -or ($key) -ne "Done") {
                         New-Item -ItemType Directory -Path ($basePath[$key]) -ErrorAction Ignore
 
                     }
@@ -917,8 +925,6 @@ Function Prep-Environment {
 		
 		$hBasePath = Parse-BasePath
 		$dumpDest = $hBasePath["Tool"] + "DumpIt.exe"
-		#$volExeDest = $hBasePath["Tool"] + "volatility.exe"
-        #$dumpDest = $hBasePath["Tool"]
         $volExeDest = $hBasePath["Tool"]
         Write-Host "Dump Location: $dumpDest" -ForegroundColor Black -BackgroundColor White
         Write-Host "Vol Location: $volExeDest" -ForegroundColor Black -BackgroundColor White
@@ -930,8 +936,8 @@ Function Prep-Environment {
 			}
 		    try {
                 Write-Host "Creating Path on target: $target" -BackgroundColor White -ForegroundColor Black
-			    #$bSize = Invoke-Command -AsJob -ComputerName $target -Credential $cred -ScriptBlock $scriptBlock -ArgumentList $hBasePath
-                $bSize = Invoke-Command -AsJob -ComputerName $target  -ScriptBlock $scriptBlock -ArgumentList $hBasePath
+			    $bSize = Invoke-Command -AsJob -ComputerName $target -Credential $cred -ScriptBlock $scriptBlock -ArgumentList $hBasePath
+                #$bSize = Invoke-Command -AsJob -ComputerName $target  -ScriptBlock $scriptBlock -ArgumentList $hBasePath
 			
 		    } catch {
 		        write-host "Prep-Environment Invoke-Command Failed" -background DarkRed
@@ -939,9 +945,8 @@ Function Prep-Environment {
 		    }
 			
 			try {
-                Write-Host "this is updated code" -BackgroundColor DarkMagenta
-                $session = New-PSSession -ComputerName $target
-			    #$session = New-PSSession -ComputerName $target -Credential $cred -Authentication Negotiate
+			    $session = New-PSSession -ComputerName $target -Credential $cred -Authentication Negotiate
+                #$session = New-PSSession -ComputerName $target
 		
 			} catch {
 			    write-host "Prep-Environment New-PSSession failed" -background DarkRed
@@ -950,15 +955,18 @@ Function Prep-Environment {
 		    
             
 			if ($bSize) {
-                Write-Host "Copying Dumpit64" -ForegroundColor Black -BackgroundColor White
+                #Write-Host "Copying Dumpit64" -ForegroundColor Black -BackgroundColor White
+                Write-It -msg "Copying Dumpit64" -type "Information"
 				Copy-Item -Path $volPath\bin\DumpIt-64.exe -Destination $dumpDest -ToSession $session
 					
 			} else {
-                Write-Host "Copying Dumpit86" -ForegroundColor Black -BackgroundColor White
+                #Write-Host "Copying Dumpit86" -ForegroundColor Black -BackgroundColor White
+                Write-It -msg "Copying Dumpit86" -type "Information"
 				Copy-Item -Path $volPath\bin\DumpIt-86.exe -Destination $dumpDest -ToSession $session
-					
+                
 			}
-            Write-Host "Copying Volatility" -ForegroundColor Black -BackgroundColor White
+            #Write-Host "Copying Volatility" -ForegroundColor Black -BackgroundColor White
+            Write-It -msg "Copying Volatility" -type "Information"
 			Copy-Item -Path $volPath\bin\volatility.exe -Destination $volExeDest -ToSession $session
             Disconnect-PSSession $session
 	        Remove-PSSession $session
@@ -1008,7 +1016,8 @@ Function Start-VHInvestigation {
     Process {
         try {
             $numOff = Test-VHConnection
-            Write-Host "$numOff systems offline"
+            #Write-Host "$numOff systems offline"
+            Write-It -msg "$numOff systems offline" -type "information"
 			if ($plugins.count -le 0) {
 				$plugins = parse-plugins
 				
@@ -1016,7 +1025,7 @@ Function Start-VHInvestigation {
 			$hBasePath = Parse-BasePath
 			$blockList = @($hBasePath, $env:VolPath, $plugins, $cred)
 			
-            Write-host "Start-Investigation" -BackgroundColor DarkGreen -ForegroundColor Blue
+            #Write-host "Start-Investigation" -BackgroundColor DarkGreen -ForegroundColor Blue
             $exeBlock = {
                 Param(
                     $hBasePath = $args[0],
@@ -1024,9 +1033,6 @@ Function Start-VHInvestigation {
 				    $plugins = $args[2],
 				    $cred = $args[3]
 				)
-
-                $pLog = "C:\Windows\CCM\PLog.txt"
-                Out-File -FilePath $pLog -InputObject "Started the exeBlock" -Append
 
                 function Run-Vol {
                     param(
@@ -1047,8 +1053,8 @@ Function Start-VHInvestigation {
                         $start = Get-Date
                         $outFile = $outputDir + $plugin + "-" + $hn + ".txt"
                         $timeouted = $null
-                        #$proc = Start-Process -Credential $cred -FilePath $command -ArgumentList "-f $imgLocation --profile=$volProfile $plugin" -RedirectStandardOutput $outFile -PassThru
-                        $proc = Start-Process -FilePath $command -ArgumentList "-f $imgLocation --profile=$volProfile $plugin" -RedirectStandardOutput $outFile -PassThru
+                        $proc = Start-Process -Credential $cred -FilePath $command -ArgumentList "-f $imgLocation --profile=$volProfile $plugin" -RedirectStandardOutput $outFile -PassThru
+                        #$proc = Start-Process -FilePath $command -ArgumentList "-f $imgLocation --profile=$volProfile $plugin" -RedirectStandardOutput $outFile -PassThru
                         $proc | Wait-Process -Timeout 3600 -ErrorAction SilentlyContinue -ErrorVariable timeouted
                         if ($timeouted) {
                             $proc | kill
@@ -1070,7 +1076,7 @@ Function Start-VHInvestigation {
                 $hostname = hostname
                 $hostImg = $hostName + ".bin"          #Based on default Input for $basePath
                 $baseDir = $hBasePath["Base"]          #Base = C:\Windows\CCm\Perf\VolH\
-                $imageDir = $hBasePath["Image"]        #Image = C:\Windows\CCm\Perf\VolH\Image\
+                $imageDir = $hBasePath["Image"]+"\"    #Image = C:\Windows\CCm\Perf\VolH\Image
                 $outputDir = $hBasePath["Output"]      #Output = C:\Windows\CCm\Perf\VolH\Output\
                 $toolDir = $hBasePath["Tool"]          #Tools = C:\Windows\CCm\Perf\VolH\Tools\
 				$doneDir = $hBasePath["Done"]          #Done = C:\Windows\CCm\Perf\VolH\VolDone.txt
@@ -1135,7 +1141,7 @@ Function Start-VHInvestigation {
                         else{$volProfile = "Win10x"+$architecture}
                             
                     }
-                        # Server 2016 Ver 14393 #
+                    # Server 2016 Ver 14393 #
                     {$_ -like "*Server 2016*"} { $volProfile = "Win2016x64_14393" } #End Server2016 switch
                     # Server 2012 #
                     {$_ -like "*Server 2012 *"} { $volProfile = "Win2012x64" }
@@ -1208,8 +1214,8 @@ Function Start-VHInvestigation {
                 Add-Content -Path $logLocation -Value "Starting memory dump"
                 Add-Content -Path $logLocation -Value "Bin file Location $imgLocation"
                 $start = Get-Date
-                #Start-Process -Credential $cred -Filepath $dumpCommand -ArgumentList "/Q /N /J /T RAW /O $imgLocation" -wait
-                Start-Process -Filepath $dumpCommand -ArgumentList "/Q /N /J /T RAW /O $imgLocation" -wait
+                Start-Process -Credential $cred -Filepath $dumpCommand -ArgumentList "/Q /N /J /T RAW /O $imgLocation" -wait
+                #Start-Process -Filepath $dumpCommand -ArgumentList "/Q /N /J /T RAW /O $imgLocation" -wait
                 Add-Content -Path $logLocation -Value "start command - `n$dumpCommand /Q /N /J /T RAW /O $imgLocation"
                 &$dumpCommand /Q /N /J /T RAW /O $imgLocation
                 $end = Get-Date
@@ -1219,29 +1225,31 @@ Function Start-VHInvestigation {
                 Get-Content "C:\Windows\System32\drivers\etc\hosts2" | Set-Content "C:\Windows\System32\drivers\etc\hosts"
                 Remove-Item "C:\Windows\System32\drivers\etc\hosts2"
                 Add-Content -Path $logLocation -Value "Memory dump completed in $($end-$start) H:M:S.MS`n"
-                    $backupTemp = $env:temp
-                    $env:temp = $baseDir
-                    $env:tmp = $baseDir
-                    rm $doneDir
-					foreach ($plugin in $plugins) {
-						Run-Vol -plugin $plugin -logLocation $logLocation -outputDir $outputDir -imgLocation $imgLocation -volProfile $volProfile -volC $volCommand -cred $cred
+                $backupTemp = $env:temp
+                $env:temp = $baseDir
+                $env:tmp = $baseDir
+                rm $doneDir
+				foreach ($plugin in $plugins) {
+				    Run-Vol -plugin $plugin -logLocation $logLocation -outputDir $outputDir -imgLocation $imgLocation -volProfile $volProfile -volC $volCommand -cred $cred
 						
-					}
+				}
 					
-                    $vhlog = "DONE"
-                    Out-File -FilePath $doneDir -InputObject $vhlog -Encoding ASCII
-                    ### FIX TEMP FOLDER CHANGE ###
-                    $env:temp = $backupTemp
-                    $env:tmp = $backupTemp
-                    Add-Content -Path "$logLocation" -Value "Temp environment variables restored`n"
+                $vhlog = "DONE"
+                Out-File -FilePath $doneDir -InputObject $vhlog -Encoding ASCII
+                ### FIX TEMP FOLDER CHANGE ###
+                $env:temp = $backupTemp
+                $env:tmp = $backupTemp
+                Add-Content -Path "$logLocation" -Value "Temp environment variables restored`n"
 
             }#End Exe Block
 
             ### MOVE ALL FILES
-            Write-Host "BEGINNING SIMULTANEOUS FILE MOVES" -ForegroundColor Black -BackgroundColor White
+            #Write-Host "BEGINNING SIMULTANEOUS FILE MOVES" -ForegroundColor Black -BackgroundColor White
+            write-it -msg "BEGINNING SIMULTANEOUS FILE MOVES" -type "Information"
 			Prep-Environment -MaxThreads $MaxThreads -targetList $targetList -cred $global:Credential
             ### EXECUTE ###
-            Write-Host "BEGINNING EXECUTION" -ForegroundColor Black -BackgroundColor Green
+            #Write-Host "BEGINNING EXECUTION" -ForegroundColor Black -BackgroundColor Green
+            Write-It -msg "BEGINNING EXECUTION" -type "Information"
             Run-VHRemote -block $exeBlock -blockArgList $blockList -MaxThreads $MaxThreads -TargetList $targetList -cred $global:Credential -ErrorAction Continue
 			
         } catch {
@@ -1314,6 +1322,7 @@ Function Watch-VHStatus{
 								
                             } else {
                                 Write-It -msg "SUCCESS: $target started VolHunterRemote" -type "Success"
+
 							}
                         }
                         $status = Validate-Path -target $target -Path $bDonePath -Creds $global:Credential
@@ -1327,6 +1336,7 @@ Function Watch-VHStatus{
                         }
                     }
                     $index++
+
                 }
                 $index = 0
                 if ($doneCount -eq $targetLength) {
@@ -1348,6 +1358,32 @@ Function Watch-VHStatus{
 		}
     }
 }#End Watch-VHStatus
+
+Function Display-VHLog {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$True,Position=0)]
+            [String]$target = 127.0.0.1
+    )
+    $hBasePath = Parse-BasePath
+    $logLoc = $hBasePath["Log"]
+
+    $scriptBlock = {
+        Param(
+            [String]$path = ""
+        )
+        $hN = hostname
+        $path = $path + "\VHLog-$hN.txt"
+        $logString = Get-Content -Path $path -Raw
+        
+        write-host $logString
+    }#end Script block
+    
+    $logString = Invoke-Command -ComputerName $target -ScriptBlock $scriptBlock -Credential $Global:Credential -ArgumentList $logLoc
+    #$logString = Invoke-Command -ComputerName $target -ScriptBlock $scriptBlock -ArgumentList $logLoc
+    write-host $logString -BackgroundColor DarkGray
+
+}#end Function Display-VHLog
 
 ###Not to be exposed by module
 Function Write-It{
@@ -1395,3 +1431,4 @@ Export-ModuleMember -Function Parse-Plugins
 #Export-ModuleMember -Function Modify-Plugins
 Export-ModuleMember -Function Validate-Path
 Export-ModuleMember -Function Prep-Environment
+Export-ModuleMember -Function Display-VHLog

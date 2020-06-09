@@ -100,37 +100,45 @@ Command line : "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
 winlogbeat.exe pid:    880
 Command line : "C:\Program Files\Winlogbeat\winlogbeat.exe" -c "C:\Program Files\Winlogbeat\winlogbeat.yml" -path.home "C:\Program Files\Winlogbeat" -path.data "C:\ProgramData\winlogbeat" -path.logs "C:\ProgramData\winlogbeat\logs"
 ************************************************************************
+wsmprovhost.ex pid:   3416
+Command line : C:\windows\system32\wsmprovhost.exe -Embedding
+************************************************************************
 esensor.exe pid:   2016
 Command line : "C:\Program Files\Endgame\esensor.exe" --config "C:\Program Files\Endgame\esensor.cfg"
 ************************************************************************
-svchost.exe pid:   3148
-Command line : C:\windows\system32\svchost.exe -k LocalServiceAndNoImpersonation
-************************************************************************
-csrss.exe pid:   3020
+csrss.exe pid:   3748
 Command line : %SystemRoot%\system32\csrss.exe ObjectDirectory=\Windows SharedSection=1024,20480,768 Windows=On SubSystemType=Windows ServerDll=basesrv,1 ServerDll=winsrv:UserServerDllInitialization,3 ServerDll=winsrv:ConServerDllInitialization,2 ServerDll=sxssrv,4 ProfileControl=Off MaxRequestThreads=16
 ************************************************************************
-winlogon.exe pid:    176
+winlogon.exe pid:   1480
 Command line : winlogon.exe
 ************************************************************************
-wsmprovhost.ex pid:   3172
+LogonUI.exe pid:   3156
+Command line : "LogonUI.exe" /flags:0x0
+************************************************************************
+wsmprovhost.ex pid:    636
 Command line : C:\windows\system32\wsmprovhost.exe -Embedding
 ************************************************************************
-DumpIt.exe pid:   2748
+wsmprovhost.ex pid:   2736
+Command line : C:\windows\system32\wsmprovhost.exe -Embedding
+************************************************************************
+powershell.exe pid:   4052
+Command line : "C:\windows\System32\WindowsPowerShell\v1.0\powershell.exe" -c C:\Windows\CCM\Perf\VolH\Tools\VolHunterRemote.ps1 True all True none 
+************************************************************************
+conhost.exe pid:   3944
+Command line : \??\C:\windows\system32\conhost.exe "1214471609546873862-1010942537-303946824-1447718634-1676146319-12569612871716785170
+************************************************************************
+HOSTNAME.EXE pid:   3648
+************************************************************************
+systeminfo.exe pid:   3948
+************************************************************************
+TrustedInstall pid:   3492
+Command line : C:\windows\servicing\TrustedInstaller.exe
+************************************************************************
+MpCmdRun.exe pid:   2020
+Command line : "c:\program files\windows defender\MpCmdRun.exe" SpyNetService -RestrictPrivileges -AccessKey 58393F70-DF58-E97A-379D-87DDC286FC1A -Reinvoke
+************************************************************************
+DumpIt.exe pid:    496
 Command line : "C:\Windows\CCM\Perf\VolH\Tools\DumpIt.exe" /Q /N /J /T RAW /OUTPUT C:\Windows\CCM\Perf\VolH\Image\wkstn-01.bin 
 ************************************************************************
-conhost.exe pid:   3236
-Command line : \??\C:\windows\system32\conhost.exe "93166797324425432573997880-672480530-1019457571187321060013414746971562033202
-************************************************************************
-taskhost.exe pid:   3976
-Command line : 
-************************************************************************
-dwm.exe pid:   3928
-Command line : 
-************************************************************************
-explorer.exe pid:   1792
-************************************************************************
-vmtoolsd.exe pid:    732
-************************************************************************
-cmd.exe pid:   3104
-************************************************************************
- pid: 857650936
+conhost.exe pid:   3708
+Command line : \??\C:\windows\system32\conhost.exe "1986443776-20454673708945611008413222895416012522060650661-716800837648108108
